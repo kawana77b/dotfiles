@@ -1,0 +1,7 @@
+" Windows:
+" $HOME\AppData\Local\nvim\init.vim
+
+" Linux:
+" $HOME/.config/nvim/init.vim
+
+source ~/.vimrc

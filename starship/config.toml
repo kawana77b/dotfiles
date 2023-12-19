@@ -1,0 +1,21 @@
+# Windows
+# $STARSHIP_CONFIG = "$HOME/.starship/config.toml"
+# Mac/Linux
+# $STARSHIP_CONFIG = "$HOME/.config/starship.toml"
+
+# プロンプトの先頭に改行を表示しない
+add_newline = false
+
+[character]
+success_symbol = "[❯](bold cyan)"
+
+[cmd_duration]
+format = "...[$duration]($style) "
+style = "yellow"
+
+[username]
+format = "[$user]($style) "
+style_user = "white"
+style_root = "white"
+disabled = false
+show_always = true

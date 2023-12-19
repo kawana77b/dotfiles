@@ -1,0 +1,384 @@
+version: '3'
+
+tasks:
+  #################################################
+  # common
+  #################################################
+  default:
+    desc: タスクのリストを表示
+    cmds:
+      - task -g -l
+    silent: true
+
+  help:
+    desc: タスクのサマリーを表示
+    summary: |
+      このタスクは、タスクのサマリーを表示します
+      タスク名を指定することで、そのタスクの詳細を表示できます
+
+      ex) task help -- dotnet:init
+
+    cmds:
+      - task -g --summary {{.CLI_ARGS}} --summary
+    silent: true
+
+  proj:basic-files:
+    desc: .gitignore LICENSE, README.mdを作成する
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - task: proj:create-readme
+      - task: proj:gitignore
+      - task: proj:license
+
+  proj:gitignore:
+    desc: .gitignoreを作成する
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - templ get gitignore
+
+  proj:license:
+    desc: LICENSEを作成する
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - templ get license
+
+  proj:create-readme:
+    desc: README.mdを作成する
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - cmd: pwsh -Command New-Item README.md
+        platforms: ["windows"]
+      - cmd: touch README.md
+        platforms: ["darwin", "linux"]
+
+  #################################################
+  # javascript
+  #################################################
+  typescript:init:
+    desc: typescriptの基本環境を作成する
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - npm init -y
+      - pnpm i -D typescript ts-node
+      - curl -s https://raw.githubusercontent.com/tsconfig/bases/main/bases/recommended.json > tsconfig.json
+      - cmd: pwsh -Command New-Item src -ItemType Directory
+        platforms: ["windows"]
+      - cmd: mkdir src
+        platforms: ["darwin", "linux"]
+      - cmd: pwsh -Command New-Item src/index.ts
+        platforms: ["windows"]
+      - cmd: touch src/index.ts
+        platforms: ["darwin", "linux"]
+      - cmd: echo "💡 [NOTE] Please edit 'tsconfig.json'"
+
+  next:init:
+    desc: next.jsの基本環境を作成する
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - pnpm dlx create-next-app@latest
+
+  vite:init:
+    desc: viteの基本環境を作成する
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - pnpm create vite@latest
+  
+  vite:tailwind:
+    desc: viteでtailwind CSSをインストール
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - pnpm install -D tailwindcss postcss autoprefixer
+      - pnpm dlx tailwindcss init -p
+      - cmd: echo "💡 [NOTE] see https://tailwindcss.com/docs/guides/vite"
+        silent: true
+      - cmd: echo "💡 [NOTE] Please edit 'tailwind.config.js' and './src/index.css'"
+        silent: true
+
+  eslint:init:
+    desc: eslint及びprettierの基本環境を作成する
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - npm init @eslint/config
+      # - pnpm install -D prettier eslint-config-prettier
+      - cmd: pwsh -Command New-Item prettier.config.js
+        platforms: ["windows"]
+        ignore_error: true
+      - cmd: touch prettier.config.js
+        platforms: ["darwin", "linux"]
+        ignore_error: true
+      - cmd: "echo 'module.exports = { plugins: [] };' > prettier.config.js"
+      - cmd: pnpm dlx prettier --write prettier.config.js
+      - task: eslint:create-eslintignore
+      - cmd: echo ""
+        silent: true
+      - cmd: echo "💡 [NOTE] Please add 'prettier' to 'extends' in '.eslintrc'"
+        silent: true
+  
+  eslint:create-eslintignore:
+    desc: .eslintignoreを作成する
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - echo "!.eslintrc.js" >> .eslintignore
+      - echo "dist/*" >> .eslintignore
+      - echo "node_modules/*" >> .eslintignore
+      - echo "gulpfile.js" >> .eslintignore
+
+  eslint:tailwind:
+    desc: tailwind-css用のeslint環境を作成する
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - pnpm i -D eslint-plugin-tailwindcss
+      - pnpm i -D prettier prettier-plugin-tailwindcss
+      - cmd: echo "💡 [NOTE] Please add 'plugin:tailwindcss/recommended' to 'extends' in '.eslintrc'"
+        silent: true
+      - cmd: echo "💡 [NOTE] Please add 'prettier-plugin-tailwindcss' to 'plugins' in 'prettier.config.js'"
+        silent: true
+
+  ts-jest:init:
+    desc: ts-jestのインストール
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - pnpm i -D jest ts-jest @types/jest
+      - pnpm dlx ts-jest config:init
+      - cmd: echo "💡 [NOTE] Try setting 'jest' to 'npm run test'. 'npm test' should also work"
+        silent: true
+
+  storybook:init:
+    desc: storybookのインストール
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - pnpm dlx storybook@latest init
+
+  plop:init:
+    desc: plopのインストール
+    dir: '{{.USER_WORKING_DIR}}'
+    vars:
+      TEMPLATE_FOLDER: templates
+    cmds:
+      - pnpm i -D plop
+      - pnpm dlx plop --init
+      - cmd: pwsh -Command New-Item {{.TEMPLATE_FOLDER}} -ItemType Directory
+        platforms: ["windows"]
+      - cmd: mkdir {{.TEMPLATE_FOLDER}}
+        platforms: ["darwin", "linux"]
+
+  #################################################
+  # Go
+  #################################################
+  go:init:
+    desc: Goの初期プロジェクトを作成
+    dir: '{{.USER_WORKING_DIR}}'
+    vars:
+      MAKEFILE: Makefile
+    preconditions:
+      - sh: '[ ! -z {{.CLI_ARGS}} ]'
+        msg: "💡 [NOTE] Please specify the project name. cf) go:init -- github.com/foo/bar"
+    cmds:
+      - cmd: pwsh -Command New-Item main.go
+        platforms: ["windows"]
+      - cmd: touch main.go
+        platforms: ["darwin", "linux"]
+      - go mod init {{.CLI_ARGS}}
+      - cmd: pwsh -Command New-Item {{.MAKEFILE}}
+        platforms: ["windows"]
+      - cmd: touch {{.MAKEFILE}}
+        platforms: ["darwin", "linux"]
+      - curl -s https://raw.githubusercontent.com/github/gitignore/main/Go.gitignore > .gitignore
+      - task: proj:create-readme
+  
+  go:test:
+    desc: Goのテストを実行
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - go test -v ./...
+
+  go:install:
+    desc: Goのパッケージをインストール
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - go install -ldflags="-s -w" -trimpath
+
+  go:build:
+    desc: Goのパッケージをビルド
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - go build -ldflags="-s -w" -trimpath
+
+  #################################################
+  # Python
+  #################################################
+  conda:create:
+    desc: pythonのconda環境を作成する
+    dir: '{{.USER_WORKING_DIR}}'
+    preconditions:
+      - sh: '[ ! -z {{.NAME}} ] && [ ! -z {{.VERSION}} ]'
+        msg: "💡 [NOTE] Please specify the environment name and version. cf) conda:create NAME=foo VERSION=3.11"
+    cmds:
+      - conda create -n {{.NAME}} python={{.VERSION}}
+
+  conda:delete:
+    desc: pythonのconda環境を削除する
+    dir: '{{.USER_WORKING_DIR}}'
+    preconditions:
+      - sh: '[ ! -z {{.CLI_ARGS}} ]'
+        msg: "💡 [NOTE] Please specify the environment name. cf) conda:delete -- foo"
+    cmds:
+      - conda remove -n {{.CLI_ARGS}} --all
+
+  venv:create:
+    desc: pythonのvenv環境を作成する
+    dir: '{{.USER_WORKING_DIR}}'
+    preconditions:
+      - sh: '[ ! -z {{.CLI_ARGS}} ]'
+        msg: "💡 [NOTE] Please specify the environment name. cf) venv:create -- foo"
+    cmds:
+      - python -m venv {{.CLI_ARGS}}
+      - cmd: echo "💡 [NOTE] Please activate venv '.\{{.CLI_ARGS}}\Scripts\Activate.ps1'"
+        silent: true
+        platforms: ["windows"]
+      - cmd: echo "💡 [NOTE] Please activate venv './{{.CLI_ARGS}}/Scripts/activate'"
+        silent: true
+        platforms: ["darwin", "linux"]
+  
+  # pip:install:
+  #   platforms: ["linux"]
+  #   desc: pythonのpipでパッケージをrequirements.txtからインストールする
+  #   summary: |
+  #     このタスクは、pythonのpipの出力をrequirements.txtからインストールします
+  #     このタスクはLinux, 基本的にDockerでの使用を想定しています
+  #     他のOSでは何もしません
+  #   dir: '{{.USER_WORKING_DIR}}'
+  #   preconditions:
+  #     - sh: '[ -f ./requirements.txt ]'
+  #       msg: "💡 [NOTE] Please create 'requirements.txt' file. cf) pip:output"
+  #   cmds:
+  #     - pip install requirements.txt
+  
+  # pip:output:
+  #   platforms: ["linux"]
+  #   desc: pythonのpipの出力をrequirements.txtに保存する
+  #   summary: |
+  #     このタスクは、pythonのpipの出力をrequirements.txtに保存します
+  #     このタスクはLinux, 基本的にDockerでの使用を想定しています
+  #     他のOSでは何もしません
+  #   dir: '{{.USER_WORKING_DIR}}'
+  #   cmds:
+  #     - pip freeze > requirements.txt
+
+  #################################################
+  # C#
+  #################################################
+  dotnet:git-files:
+    desc: 現在のフォルダにC#向けの.gitignore, .gitattributesを作成
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - dotnet new gitignore
+      - curl -s https://raw.githubusercontent.com/github/VisualStudio/master/.gitattributes > .gitattributes
+
+  dotnet:init:
+    desc: 現在のフォルダにC#のtemplate/NUnit csprojを作成
+    summary: |
+      このタスクは、現在のフォルダにC#のtemplate/NUnit csprojを作成します
+      テンプレートはデフォルトで 'classlib' ですが、TEMPLATE変数を指定することで変更できます
+      また、TARGET_FRAMEWORK変数を指定することで、ターゲットフレームワークを変更できます. 例えば、'net6.0' です
+
+      ex) task -g dotnet:init TEMPLATE=console -- Foo
+    dir: '{{.USER_WORKING_DIR}}'
+    vars:
+      TEMPLATE: '{{default "classlib" .TEMPLATE}}'
+      TARGET_FRAMEWORK: '{{default "net6.0" .TARGET_FRAMEWORK}}'
+      TEST_PROJ_NAME: '{{.CLI_ARGS}}.Test'
+    preconditions:
+      - sh: '[ ! -z {{.CLI_ARGS}} ]'
+        msg: "💡 [NOTE] Please specify the project name. cf) dotnet:init -- Foo"
+    cmds:
+      - dotnet new sln
+      - task: dotnet:git-files
+      - task: proj:create-readme
+      - dotnet new {{.TEMPLATE}} -o {{.CLI_ARGS}} -f {{.TARGET_FRAMEWORK}}
+      - dotnet sln add {{.CLI_ARGS}}/{{.CLI_ARGS}}.csproj
+      - dotnet new nunit -o {{.TEST_PROJ_NAME}} -f {{.TARGET_FRAMEWORK}}
+      - dotnet sln add {{.TEST_PROJ_NAME}}/{{.TEST_PROJ_NAME}}.csproj
+      - dotnet add {{.TEST_PROJ_NAME}}/{{.TEST_PROJ_NAME}}.csproj reference {{.CLI_ARGS}}/{{.CLI_ARGS}}.csproj
+      - dotnet restore
+  
+  dotnet:init:console:
+    desc: 現在のフォルダにC#のコンソールプロジェクトと、NUnit.cprojを作成
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - task: dotnet:init
+        vars:
+          TEMPLATE: console
+
+  #################################################
+  # docker
+  #################################################
+  docker:search-image-tag:official:
+    desc: Docker Hubから公式イメージのタグを検索する
+    dir: '{{.USER_WORKING_DIR}}'
+    summary: |
+      引数のDocker Hubのイメージタグを検索します
+      非公式イメージは docker:search-image-tag タスクを利用してください
+      引数の値は node のようになります
+    preconditions:
+      - sh: '[ ! -z {{.CLI_ARGS}} ]'
+        msg: "arugument is required. (image name)"
+    cmds:
+      - cmd: curl -s https://hub.docker.com/v2/repositories/library/{{.CLI_ARGS}}/tags/?page_size=100 | jq -r .results[].name
+        silent: true
+
+  docker:search-image-tag:
+    desc: Docker Hubからイメージのタグを検索する
+    summary: |
+      引数のDocker Hubのイメージタグを検索します
+      公式イメージは docker:search-image-tag:official タスクを利用してください
+      引数の値は bitnami/node のようになります
+    preconditions:
+      - sh: '[ ! -z {{.CLI_ARGS}} ]'
+        msg: "arugument is required. (image name)"
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - cmd: curl -s https://hub.docker.com/v2/repositories/{{.CLI_ARGS}}/tags/?page_size=100 | jq -r .results[].name
+        silent: true
+
+  #################################################
+  # Package Manger
+  #################################################
+  go:pkg-cleanup:
+    desc: Goのパッケージキャッシュを削除する
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - go clean --modcache
+      - cmd: echo "package cache cleaned."
+        silent: true
+
+  pip:cleanup:
+    desc: pipのキャッシュを削除する
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - pip cache purge
+
+  npm:cleanup:
+    desc: npmのキャッシュを削除する
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - npm cache verify
+
+  pnpm:cleanup:
+    desc: pnpmのキャッシュを削除する
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - pnpm store prune
+
+  nuget:cleanup:
+    desc: nugetのキャッシュを削除する
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - dotnet nuget locals all --clear
+
+  scoop:cleanup:
+    platforms: ["windows"]
+    desc: scoopのキャッシュを削除する
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - scoop cleanup --cache --all

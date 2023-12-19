@@ -1,0 +1,36 @@
+color cursor black blue
+
+set mouse = true
+set refresh-mode = auto
+set main-view = id date author:email-user commit-title:graph=yes,refs=yes
+
+# 選択コミットIDをコピーする (要Linux)
+bind generic @cp @bash -c "echo -n '%(commit)' | xsel --clipboard --input"
+bind generic F   !git fetch %(remote)
+
+bind main    F   !git fetch %(remote)
+bind main    M   ?git merge %(branch)
+bind main    N   ?git checkout -b %(prompt) %(branch)
+bind main    C   ?git checkout %(prompt)
+bind main    @pi ?git cherry-pick %(commit)
+bind main    @ma ?git merge --abort
+bind main    @rh ?git reset --hard %(commit)
+bind main    @ri ?git rebase -i %(commit)
+bind main    @ra ?git rebase --abort
+bind main    @rc ?git rebase --continue
+# HEADと当該コミットのdiffを比較
+bind main    .   !sh -c "git diff %(commit) | tig"
+
+bind branch  P   ?git push -u %(remote) %(repo:head)
+bind branch  U   ?git pull %(remote) %(branch)
+bind branch  M   ?git merge %(branch)
+bind branch  @ma ?git merge --abort
+bind branch  N   ?git checkout -b %(prompt) %(branch)
+bind branch  D   ?git branch -d %(branch)
+bind branch  @dr ?git push --delete %(remote) %(branch)
+
+bind status  A   @git add -A
+bind status  C   ?git commit
+bind status  @ca ?git commit --amend
+bind status  @rf ?git restore %(file)
+bind status  @r. ?git restore .
