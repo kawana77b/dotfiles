@@ -6,13 +6,17 @@
 #起動時エンコーディングをUTF-8で設定する
 $OutputEncoding = [System.Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
 
-$env:LANG = "ja_JP.UTF-8"
+if ($IsWindows) {
+  $env:LANG = "ja_JP.UTF-8"
+}
 
 # $env:VAGRANT_HOME = "D:\Vagrant\.vagrant.d"
 
 # starship
-$env:STARSHIP_CONFIG = "$HOME\.starship\config.toml"
-$env:STARSHIP_CACHE = "$HOME\AppData\Local\Temp"
+$env:STARSHIP_CONFIG = "$HOME\.config\starship.toml"
+if ($IsWindows) {
+  $env:STARSHIP_CACHE = "$HOME\AppData\Local\Temp"
+}
 
 # GOLANG
 $env:GOPATH = "$HOME\go"
@@ -21,17 +25,18 @@ $env:PATH = $env:PATH + ";$env:GOPATH"
 # $env:GOPRIVATE = ""
 # $env:GOINSECURE = ""
 # ~/Documents/PowerShell/Scripts/go.ps1があれば読み込む (自宅用)
-if (Test-Path "$HOME\Documents\PowerShell\Scripts\go.ps1") {
+if ($IsWindows -and (Test-Path "$HOME\Documents\PowerShell\Scripts\go.ps1")) {
   . "$HOME\Documents\PowerShell\Scripts\go.ps1"
 }
 
 # zoxide
-$env:_ZO_FZF_OPTS = '--height 40% --reverse'
-Invoke-Expression (& {
-    $hook = if ($PSVersionTable.PSVersion.Major -lt 6) { 'prompt' } else { 'pwd' }
-    (zoxide init --hook $hook powershell) -join "`n"
-  })
-
+if (Get-Command zoxide -ErrorAction SilentlyContinue) {
+  $env:_ZO_FZF_OPTS = '--height 40% --reverse'
+  Invoke-Expression (& {
+      $hook = if ($PSVersionTable.PSVersion.Major -lt 6) { 'prompt' } else { 'pwd' }
+      (zoxide init --hook $hook powershell) -join "`n"
+    })
+}
 
 # -------------------------------
 # Functions
@@ -162,12 +167,12 @@ function getHistory(
   return $hists
 }
 
-if (Get-Command conda -ErrorAction SilentlyContinue) {
+if ($IsWindows -and (Get-Command conda -ErrorAction SilentlyContinue)) {
   function useconda() {
     #region conda initialize
     # !! Contents within this block are managed by 'conda init' !!
     If (Test-Path "$HOME\anaconda3\Scripts\conda.exe") {
-    (& "$HOME\anaconda3\Scripts\conda.exe" "shell.powershell" "hook") | Out-String | ? { $_ } | Invoke-Expression
+    (& "$HOME\anaconda3\Scripts\conda.exe" "shell.powershell" "hook") | Out-String | Where-Object { $_ } | Invoke-Expression
     }
     #endregion
   }
@@ -175,7 +180,7 @@ if (Get-Command conda -ErrorAction SilentlyContinue) {
 
 # Reads Autoload Files
 if ($IsWindows) {
-  $psdir = "$HOME\Documents\PowerShell\autoload"
+  $psdir = Join-Path (Split-Path -Parent $PROFILE.CurrentUserAllHosts) "autoload"
   if (Test-Path -Path $psdir) {
     Get-ChildItem "${psdir}\*.ps1" | ForEach-Object { .$_ }
   }
@@ -185,9 +190,13 @@ if ($IsWindows) {
 # DockerCompletion
 # https://www.powershellgallery.com/packages/DockerCompletion
 if ($IsWindows -and (Get-Command docker -ErrorAction SilentlyContinue)) {
-  Import-Module DockerCompletion
-  Import-Module CompletionPredictor
-  Set-PSReadLineOption -PredictionSource HistoryAndPlugin
+  if (Get-Module -Name DockerCompletion -ErrorAction SilentlyContinue) {
+    Import-Module DockerCompletion
+  }
+  if (Get-Module -Name CompletionPredictor -ErrorAction SilentlyContinue) {
+    Import-Module CompletionPredictor
+    Set-PSReadLineOption -PredictionSource HistoryAndPlugin
+  }
 }
 
 # starship
@@ -204,7 +213,7 @@ Set-Alias new New-Object
 Set-Alias which Get-Command
 
 ## Windows
-if ($pratform -match "Win32") {
+if ($IsWindows) {
   Set-Alias open explorer.exe
 }
 
@@ -224,8 +233,3 @@ if (Get-Command nvim -ErrorAction SilentlyContinue) {
 if (Get-Command tre -ErrorAction SilentlyContinue) {
   Set-Alias tree tre
 }
-
-#-------------------------
-# Dispose Variable
-#-------------------------
-$pratform = $null

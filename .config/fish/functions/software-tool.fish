@@ -33,7 +33,9 @@ function software-tool --argument-names cmd --description "Manage various OS pac
           case brew
             brew update
           case apt
-            sudo apt update && sudo apt upgrade
+            if test (uname -s) = "Linux"
+              sudo apt update && sudo apt upgrade
+            end
         end
       end
   end

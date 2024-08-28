@@ -4,6 +4,16 @@ if status is-interactive
     alias bd='cd ../'
     alias cls='clear'
 
+    if test (uname -s) = "Darwin"; and test -d /opt/homebrew
+      eval (/opt/homebrew/bin/brew shellenv)
+    else if test (uname -s) = "Linux"; and test -d /home/linuxbrew/.linuxbrew
+      eval (/home/linuxbrew/.linuxbrew/bin/brew shellenv)
+    end
+
+    if uname -r | string match -q -- "*WSL*"
+      set -x GPG_TTY $(tty)
+    end
+
     test -d $HOME/.local/bin; and set -gx PATH $HOME/.local/bin $PATH
 
     type -q nvim; and alias vim='nvim'
@@ -50,5 +60,4 @@ if status is-interactive
     type -q starship; and starship init fish | source
     type -q zoxide; and zoxide init fish | source
     type -q bookmark; and bookmark init fish | source
-
 end
