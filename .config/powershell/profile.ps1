@@ -1,7 +1,5 @@
 # -> $HOME\Documents\PowerShell\Profile.ps1
 
-$script:pratform = [System.Environment]::OSVersion | Select-Object -Property Platform
-
 #--------------------------------
 # Env
 #--------------------------------
@@ -51,7 +49,7 @@ function tohome() {
   Set-Location $HOME
 }
 
-if ($pratform -match "Win32") {
+if ($IsWindows) {
   # デスクトップへ移動する
   function todesktop() {
     $dir = Join-Path $HOME "Desktop"
@@ -85,14 +83,25 @@ if ($pratform -match "Win32") {
     }
   }
 
-  if ($null -ne (Get-Command wt)) {
+  if (Get-Command wt -ErrorAction SilentlyContinue) {
     # Windows Terminalで新規ディスプレイで指定ディレクトリを開く
     function wtd([string] $path) {
       if ([string]::IsNullOrEmpty($path) -eq $true) {
         $path = $PWD
       }
-
       wt -d $path
+    }
+  }
+
+  # D://のルートがあればそこに移動する
+  function tod() {
+    $d_drive = Get-PSDrive | Where-Object { $_.Root -match "D:" }
+    if ($null -eq $d_drive) {
+      return;
+    }
+    $d_rootPath = $d_drive.Root
+    if (Test-Path $d_rootPath) {
+      Set-Location $d_rootPath
     }
   }
 }
@@ -103,18 +112,6 @@ function touserprof() {
   Set-Location $dir
 }
 
-# D://のルートがあればそこに移動する
-function tod() {
-  $d_drive = Get-PSDrive | Where-Object { $_.Root -match "D:" }
-  if ($null -eq $d_drive) {
-    return;
-  }
-
-  $d_rootPath = $d_drive.Root
-  if (Test-Path $d_rootPath) {
-    Set-Location $d_rootPath
-  }
-}
 
 # 再帰的にパス傘下のファイル・ディレクトリを消去
 function rmall {
@@ -165,7 +162,7 @@ function getHistory(
   return $hists
 }
 
-if ($null -ne (Get-Command conda)) {
+if (Get-Command conda -ErrorAction SilentlyContinue) {
   function useconda() {
     #region conda initialize
     # !! Contents within this block are managed by 'conda init' !!
@@ -177,22 +174,24 @@ if ($null -ne (Get-Command conda)) {
 }
 
 # Reads Autoload Files
-$psdir = "$HOME\Documents\PowerShell\autoload"
-if (Test-Path -Path $psdir) {
-  Get-ChildItem "${psdir}\*.ps1" | ForEach-Object { .$_ }
+if ($IsWindows) {
+  $psdir = "$HOME\Documents\PowerShell\autoload"
+  if (Test-Path -Path $psdir) {
+    Get-ChildItem "${psdir}\*.ps1" | ForEach-Object { .$_ }
+  }
+  $psdir = $null
 }
-$psdir = $null
 
 # DockerCompletion
 # https://www.powershellgallery.com/packages/DockerCompletion
-if ($null -ne (Get-Command docker)) {
+if ($IsWindows -and (Get-Command docker -ErrorAction SilentlyContinue)) {
   Import-Module DockerCompletion
   Import-Module CompletionPredictor
   Set-PSReadLineOption -PredictionSource HistoryAndPlugin
 }
 
 # starship
-if ($null -ne (Get-Command starship)) {
+if ($IsWindows -and (Get-Command starship -ErrorAction SilentlyContinue)) {
   Invoke-Expression (&starship init powershell)
 }
 
@@ -210,19 +209,19 @@ if ($pratform -match "Win32") {
 }
 
 ## Specialized
-if ($null -ne (Get-Command fd)) {
+if (Get-Command fd -ErrorAction SilentlyContinue) {
   Set-Alias find fd
 }
 
-if ($null -ne (Get-Command rg)) {
+if (Get-Command rg -ErrorAction SilentlyContinue) {
   Set-Alias grep rg
 }
 
-if ($null -ne (Get-Command nvim)) {
+if (Get-Command nvim -ErrorAction SilentlyContinue) {
   Set-Alias vim nvim
 }
 
-if ($null -ne (Get-Command tre)) {
+if (Get-Command tre -ErrorAction SilentlyContinue) {
   Set-Alias tree tre
 }
 
