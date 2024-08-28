@@ -18,6 +18,8 @@ if status is-interactive
 
     type -q nvim; and alias vim='nvim'
 
+    type -q 7zz; and alias 7z='7zz'
+
     if type -q eza
       alias ls='eza -a'
       alias ll='eza -l -a'
