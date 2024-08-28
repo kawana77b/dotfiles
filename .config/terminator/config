@@ -1,0 +1,24 @@
+[global_config]
+  title_transmit_bg_color = "#3584e4"
+  title_receive_bg_color = "#e01b24"
+[keybindings]
+  copy = <Primary><Shift>c
+  paste = <Primary><Shift>v
+[profiles]
+  [[default]]
+    background_darkness = 0.9
+    background_type = transparent
+    cursor_color = "#aaaaaa"
+    font = HackGen35 Console NF 11
+    use_system_font = False
+[layouts]
+  [[default]]
+    [[[window0]]]
+      type = Window
+      size = 1000, 600
+      parent = ""
+    [[[child1]]]
+      type = Terminal
+      parent = window0
+      profile = default
+[plugins]

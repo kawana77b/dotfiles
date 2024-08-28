@@ -1,20 +1,22 @@
 # -> $HOME\Documents\PowerShell\Profile.ps1
 
-$script:pratform = [System.Environment]::OSVersion | Select-Object -Property Platform
-
 #--------------------------------
 # Env
 #--------------------------------
 #起動時エンコーディングをUTF-8で設定する
 $OutputEncoding = [System.Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
 
-$env:LANG = "ja_JP.UTF-8"
+if ($IsWindows) {
+  $env:LANG = "ja_JP.UTF-8"
+}
 
 # $env:VAGRANT_HOME = "D:\Vagrant\.vagrant.d"
 
 # starship
-$env:STARSHIP_CONFIG = "$HOME\.starship\config.toml"
-$env:STARSHIP_CACHE = "$HOME\AppData\Local\Temp"
+$env:STARSHIP_CONFIG = "$HOME\.config\starship.toml"
+if ($IsWindows) {
+  $env:STARSHIP_CACHE = "$HOME\AppData\Local\Temp"
+}
 
 # GOLANG
 $env:GOPATH = "$HOME\go"
@@ -23,17 +25,18 @@ $env:PATH = $env:PATH + ";$env:GOPATH"
 # $env:GOPRIVATE = ""
 # $env:GOINSECURE = ""
 # ~/Documents/PowerShell/Scripts/go.ps1があれば読み込む (自宅用)
-if (Test-Path "$HOME\Documents\PowerShell\Scripts\go.ps1") {
+if ($IsWindows -and (Test-Path "$HOME\Documents\PowerShell\Scripts\go.ps1")) {
   . "$HOME\Documents\PowerShell\Scripts\go.ps1"
 }
 
 # zoxide
-$env:_ZO_FZF_OPTS = '--height 40% --reverse'
-Invoke-Expression (& {
-    $hook = if ($PSVersionTable.PSVersion.Major -lt 6) { 'prompt' } else { 'pwd' }
-    (zoxide init --hook $hook powershell) -join "`n"
-  })
-
+if (Get-Command zoxide -ErrorAction SilentlyContinue) {
+  $env:_ZO_FZF_OPTS = '--height 40% --reverse'
+  Invoke-Expression (& {
+      $hook = if ($PSVersionTable.PSVersion.Major -lt 6) { 'prompt' } else { 'pwd' }
+      (zoxide init --hook $hook powershell) -join "`n"
+    })
+}
 
 # -------------------------------
 # Functions
@@ -51,7 +54,7 @@ function tohome() {
   Set-Location $HOME
 }
 
-if ($pratform -match "Win32") {
+if ($IsWindows) {
   # デスクトップへ移動する
   function todesktop() {
     $dir = Join-Path $HOME "Desktop"
@@ -85,14 +88,25 @@ if ($pratform -match "Win32") {
     }
   }
 
-  if ($null -ne (Get-Command wt)) {
+  if (Get-Command wt -ErrorAction SilentlyContinue) {
     # Windows Terminalで新規ディスプレイで指定ディレクトリを開く
     function wtd([string] $path) {
       if ([string]::IsNullOrEmpty($path) -eq $true) {
         $path = $PWD
       }
-
       wt -d $path
+    }
+  }
+
+  # D://のルートがあればそこに移動する
+  function tod() {
+    $d_drive = Get-PSDrive | Where-Object { $_.Root -match "D:" }
+    if ($null -eq $d_drive) {
+      return;
+    }
+    $d_rootPath = $d_drive.Root
+    if (Test-Path $d_rootPath) {
+      Set-Location $d_rootPath
     }
   }
 }
@@ -103,18 +117,6 @@ function touserprof() {
   Set-Location $dir
 }
 
-# D://のルートがあればそこに移動する
-function tod() {
-  $d_drive = Get-PSDrive | Where-Object { $_.Root -match "D:" }
-  if ($null -eq $d_drive) {
-    return;
-  }
-
-  $d_rootPath = $d_drive.Root
-  if (Test-Path $d_rootPath) {
-    Set-Location $d_rootPath
-  }
-}
 
 # 再帰的にパス傘下のファイル・ディレクトリを消去
 function rmall {
@@ -165,34 +167,40 @@ function getHistory(
   return $hists
 }
 
-if ($null -ne (Get-Command conda)) {
+if ($IsWindows -and (Get-Command conda -ErrorAction SilentlyContinue)) {
   function useconda() {
     #region conda initialize
     # !! Contents within this block are managed by 'conda init' !!
     If (Test-Path "$HOME\anaconda3\Scripts\conda.exe") {
-    (& "$HOME\anaconda3\Scripts\conda.exe" "shell.powershell" "hook") | Out-String | ? { $_ } | Invoke-Expression
+    (& "$HOME\anaconda3\Scripts\conda.exe" "shell.powershell" "hook") | Out-String | Where-Object { $_ } | Invoke-Expression
     }
     #endregion
   }
 }
 
 # Reads Autoload Files
-$psdir = "$HOME\Documents\PowerShell\autoload"
-if (Test-Path -Path $psdir) {
-  Get-ChildItem "${psdir}\*.ps1" | ForEach-Object { .$_ }
+if ($IsWindows) {
+  $psdir = Join-Path (Split-Path -Parent $PROFILE.CurrentUserAllHosts) "autoload"
+  if (Test-Path -Path $psdir) {
+    Get-ChildItem "${psdir}\*.ps1" | ForEach-Object { .$_ }
+  }
+  $psdir = $null
 }
-$psdir = $null
 
 # DockerCompletion
 # https://www.powershellgallery.com/packages/DockerCompletion
-if ($null -ne (Get-Command docker)) {
-  Import-Module DockerCompletion
-  Import-Module CompletionPredictor
-  Set-PSReadLineOption -PredictionSource HistoryAndPlugin
+if ($IsWindows -and (Get-Command docker -ErrorAction SilentlyContinue)) {
+  if (Get-Module -Name DockerCompletion -ErrorAction SilentlyContinue) {
+    Import-Module DockerCompletion
+  }
+  if (Get-Module -Name CompletionPredictor -ErrorAction SilentlyContinue) {
+    Import-Module CompletionPredictor
+    Set-PSReadLineOption -PredictionSource HistoryAndPlugin
+  }
 }
 
 # starship
-if ($null -ne (Get-Command starship)) {
+if ($IsWindows -and (Get-Command starship -ErrorAction SilentlyContinue)) {
   Invoke-Expression (&starship init powershell)
 }
 
@@ -205,28 +213,23 @@ Set-Alias new New-Object
 Set-Alias which Get-Command
 
 ## Windows
-if ($pratform -match "Win32") {
+if ($IsWindows) {
   Set-Alias open explorer.exe
 }
 
 ## Specialized
-if ($null -ne (Get-Command fd)) {
+if (Get-Command fd -ErrorAction SilentlyContinue) {
   Set-Alias find fd
 }
 
-if ($null -ne (Get-Command rg)) {
+if (Get-Command rg -ErrorAction SilentlyContinue) {
   Set-Alias grep rg
 }
 
-if ($null -ne (Get-Command nvim)) {
+if (Get-Command nvim -ErrorAction SilentlyContinue) {
   Set-Alias vim nvim
 }
 
-if ($null -ne (Get-Command tre)) {
+if (Get-Command tre -ErrorAction SilentlyContinue) {
   Set-Alias tree tre
 }
-
-#-------------------------
-# Dispose Variable
-#-------------------------
-$pratform = $null
