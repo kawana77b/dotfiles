@@ -1,5 +1,6 @@
 function software-tool --argument-names cmd --description "Manage various OS package repositories."
   set -l repos snap flatpak brew apt
+  set -l os (uname -s)
 
   switch $cmd
     case "" -h --help
@@ -23,6 +24,9 @@ function software-tool --argument-names cmd --description "Manage various OS pac
         if not contains $repo $repos; or ! type -q $repo
           continue
         end
+        if test $repo = "apt"; and test $os != "Linux"
+          continue
+        end
 
         echo "💡 $repo"
         switch $repo
@@ -33,9 +37,7 @@ function software-tool --argument-names cmd --description "Manage various OS pac
           case brew
             brew update
           case apt
-            if test (uname -s) = "Linux"
-              sudo apt update && sudo apt upgrade
-            end
+            sudo apt update && sudo apt upgrade
         end
       end
   end
